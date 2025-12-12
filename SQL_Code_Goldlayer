@@ -1,4 +1,4 @@
-**--> SQL Query to fetch top 100 rows from the customers.csv data**
+<strong>--> SQL Query to fetch top 100 rows from the customers.csv data</strong>
 
 SELECT
     TOP 100 *
