@@ -1,0 +1,79 @@
+**--> SQL Query to fetch top 100 rows from the customers.csv data**
+
+SELECT
+    TOP 100 *
+FROM
+    OPENROWSET(
+        BULK 'https://synapseolistdefault.dfs.core.windows.net/synapseolistfs/customers.csv',
+        FORMAT = 'CSV',
+        PARSER_VERSION = '2.0'
+    ) AS [result]
+
+
+
+--> SQL Query to fetch the cleaned data stored in the silver container 
+
+SELECT
+     *
+FROM
+    OPENROWSET(
+        BULK 'https://olistdatastorageaccount.dfs.core.windows.net/olistdata/silver/',
+        FORMAT = 'PARQUET'
+    ) AS result1
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------
+
+--> SQL Query creating schema named gold which holds the finest data that can be given to any entity for analysis and insights
+
+create schema gold
+
+create view gold.final 
+as 
+SELECT
+     *
+FROM
+    OPENROWSET(
+        BULK 'https://olistdatastorageaccount.dfs.core.windows.net/olistdata/silver/',
+        FORMAT = 'PARQUET'
+    ) AS result1
+
+
+
+select * from gold.final
+
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+--> SQL Query to push the data to the gold contanier and securing with password in order to maintian the security of the data
+
+CREATE MASTER KEY ENCRYPTION BY PASSWORD = '';
+CREATE DATABASE SCOPED CREDENTIAL hetadmin WITH IDENTITY = 'Managed Identity';
+
+select * from sys.database_credentials
+
+CREATE EXTERNAL FILE FORMAT extfileformat WITH (
+    FORMAT_TYPE = PARQUET,
+    DATA_COMPRESSION = 'org.apache.hadoop.io.compress.SnappyCodec'
+);
+
+CREATE EXTERNAL DATA SOURCE goldlayer WITH (
+    LOCATION = 'https://olistdatastorageaccount.dfs.core.windows.net/olistdata/gold/',
+    CREDENTIAL = mayankadmin
+);
+
+
+CREATE EXTERNAL TABLE gold.finaltable WITH (
+        LOCATION = 'Serving',
+        DATA_SOURCE = goldlayer,
+        FILE_FORMAT = extfileformat
+) AS
+SELECT * FROM gold.final2;
+
+--------------------------------------------------------------------------------------------------------------------------------------------------
+
+--> SQL Query to run the final data in viewmode in Azure Synapsis.
+
+select * from gold.finaltable
